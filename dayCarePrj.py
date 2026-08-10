@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QLabel, QVBoxLayout, 
                              QWidget, QPushButton, QMessageBox, QFileDialog, QLineEdit)
-from PyQt5.QtGui import QFont, QDoubleValidator
+from PyQt5.QtGui import QFont, QDoubleValidator, QIntValidator
 from PyQt5.QtCore import Qt
 from logic import DaycareAllocator
 from format_config import get_input_format_help, get_selection_instructions
@@ -55,6 +55,14 @@ class MainWindow(QMainWindow):
         validator.setNotation(QDoubleValidator.StandardNotation)
         self.input_rate.setValidator(validator)
         self.input_rate.textChanged.connect(self.update_run_button_state)
+
+        self.input_hours_per_daycare = QLineEdit("1")
+        self.input_hours_per_daycare.setFixedWidth(140)
+        self.input_hours_per_daycare.setMaximumWidth(200)
+        self.input_hours_per_daycare.setToolTip('כמה שעות יקבל כל מעון בחודש — למשל 4')
+        hours_validator = QIntValidator(1, 1000, self)
+        self.input_hours_per_daycare.setValidator(hours_validator)
+        self.input_hours_per_daycare.textChanged.connect(self.update_run_button_state)
         
         self.btn_run = QPushButton("הפקת דוח שיבוץ")
         self.btn_run.setStyleSheet("padding: 12px; font-size: 15px; font-weight: bold; background-color: #1976D2; color: white;")
@@ -89,6 +97,8 @@ class MainWindow(QMainWindow):
         
         layout.addWidget(QLabel("<b>תעריף שעתי (ש\"ח):</b>"))
         layout.addWidget(self.input_rate)
+        layout.addWidget(QLabel("<b>שעות למעון בחודש:</b>"))
+        layout.addWidget(self.input_hours_per_daycare)
         
         layout.addSpacing(20)
         layout.addWidget(self.btn_run)
@@ -137,26 +147,34 @@ class MainWindow(QMainWindow):
             
         try:
             rate = float(self.input_rate.text())
+            hours_per_daycare = int(self.input_hours_per_daycare.text())
             save_path, _ = QFileDialog.getSaveFileName(self, "שמור קובץ שיבוץ", "שיבוץ_מעונות_סופי.xlsx", "Excel Files (*.xlsx)")
             if not save_path:
                 return
                 
-            allocator = DaycareAllocator(hourly_rate=rate)
+            allocator = DaycareAllocator(hourly_rate=rate, hours_per_daycare=hours_per_daycare)
             warnings_list = allocator.generate_schedule(self.daycares_path, self.salaries_path, save_path)
             
             if warnings_list:
                 msg = f"הקובץ נוצר בהצלחה ונשמר ב:\n{save_path}\n\n"
                 msg += "שים לב - חסרות שעות תקציב במערכת עבור המעונות הבאים:\n"
                 msg += "\n".join(warnings_list)
-                QMessageBox.warning(self, "הצלחה עם חריגות", msg)
+                self._show_warning_message("הצלחה עם חריגות", msg)
             else:
                 QMessageBox.information(self, "הצלחה", f"הקובץ נוצר בהצלחה ונשמר ב:\n{save_path}")
             
-            # סגירת החלון לאחר אישור ההודעה
-            self.close()
-            
         except Exception as e:
             QMessageBox.critical(self, "שגיאת מערכת", f"אירעה שגיאה במהלך עיבוד הנתונים:\n{str(e)}")
+
+    def _show_warning_message(self, title: str, message: str):
+        dialog = QMessageBox(self)
+        dialog.setWindowTitle(title)
+        dialog.setText(message)
+        dialog.setIcon(QMessageBox.Warning)
+        dialog.setStandardButtons(QMessageBox.Ok)
+        dialog.setSizeGripEnabled(True)
+        dialog.setStyleSheet("QMessageBox { min-width: 620px; }")
+        dialog.exec_()
 
     def show_format_info(self):
         QMessageBox.information(self, "הגדרות קבצי קלט", get_input_format_help())
@@ -174,13 +192,22 @@ class MainWindow(QMainWindow):
         except Exception:
             rate_ok = False
 
-        enabled = bool(self.daycares_path) and bool(self.salaries_path) and rate_ok
+        hours_ok = False
+        try:
+            txt = self.input_hours_per_daycare.text().strip()
+            hours_ok = bool(txt) and int(txt) > 0
+        except Exception:
+            hours_ok = False
+
+        enabled = bool(self.daycares_path) and bool(self.salaries_path) and rate_ok and hours_ok
         self.btn_run.setEnabled(enabled)
         if not enabled:
             if not self.daycares_path or not self.salaries_path:
-                self.status_label.setText("בחר קבצים ובדוק את התעריף לפני הפקת הדוח.")
+                self.status_label.setText("בחר קבצים ובדוק את התעריף ואת כמות השעות לפני הפקת הדוח.")
             elif not rate_ok:
                 self.status_label.setText("הזן תעריף שעתי תקין (מספר חיובי).")
+            elif not hours_ok:
+                self.status_label.setText("הזן כמות שעות חוקית למעון בחודש (מספר חיובי).")
         else:
             self.status_label.setText("")
 

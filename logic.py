@@ -17,14 +17,25 @@ from scheduler import WorkDateScheduler
 
 
 class DaycareAllocator:
-    def __init__(self, hourly_rate: float, scheduler: Optional[WorkDateScheduler] = None):
+    def __init__(self, hourly_rate: float, hours_per_daycare: int = 1, scheduler: Optional[WorkDateScheduler] = None):
         """Create allocator.
 
         Pass a custom `scheduler` for different work-day rules during tests
-        or if you want to tweak holiday/ev e rules without changing code.
+        or if you want to tweak holiday/eve rules without changing code.
         """
         self.hourly_rate = hourly_rate
+        self.hours_per_daycare = self._normalize_hours_per_daycare(hours_per_daycare)
         self.scheduler = scheduler or WorkDateScheduler()
+
+    def _normalize_hours_per_daycare(self, hours_per_daycare: int) -> int:
+        try:
+            hours = int(hours_per_daycare)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("כמות השעות למעון חייבת להיות מספר שלם חיובי.") from exc
+
+        if hours <= 0:
+            raise ValueError("כמות השעות למעון חייבת להיות מספר שלם חיובי.")
+        return hours
 
     def _read_salaries(self, filepath: str) -> pd.DataFrame:
         with warnings.catch_warnings():
@@ -70,7 +81,10 @@ class DaycareAllocator:
             return 0
             
         salary = float(worker_data[SalaryColumns.TOTAL_EMPLOYER_COST].iloc[0])
-        return int(salary // self.hourly_rate)
+        total_hours = int(salary // self.hourly_rate)
+        if self.hours_per_daycare <= 0:
+            return 0
+        return total_hours // self.hours_per_daycare
 
     def generate_schedule(self, daycares_path: str, salaries_path: str, output_path: str) -> list:
         df_daycares = pd.read_excel(daycares_path)
@@ -177,10 +191,10 @@ class DaycareAllocator:
                         if worker_month_dates[(worker, year, month)]:
                             w_date = worker_month_dates[(worker, year, month)].pop(0)
                             row_data[col_date] = w_date.strftime('%d/%m/%Y')
-                            row_data[col_hours] = 1
-                            row_data[col_rate] = self.hourly_rate
-                            worker_totals_hours[col_hours] += 1
-                            worker_totals_pay[col_rate] += self.hourly_rate
+                            row_data[col_hours] = self.hours_per_daycare
+                            row_data[col_rate] = self.hourly_rate * self.hours_per_daycare
+                            worker_totals_hours[col_hours] += self.hours_per_daycare
+                            worker_totals_pay[col_rate] += self.hourly_rate * self.hours_per_daycare
                         else:
                             row_data[col_date], row_data[col_hours], row_data[col_rate] = "", "", ""
                     else:
