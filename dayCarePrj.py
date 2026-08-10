@@ -6,7 +6,6 @@ from PyQt5.QtGui import QFont, QDoubleValidator, QIntValidator
 from PyQt5.QtCore import Qt
 from logic import DaycareAllocator
 from format_config import get_input_format_help, get_selection_instructions
-# updater removed: update checking/installation disabled per user request
 
 class MainWindow(QMainWindow):
     def __init__(self):
