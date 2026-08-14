@@ -21,7 +21,7 @@ class ScheduleColumns:
 
 @dataclass(frozen=True)
 class InputFileFormats:
-    salary_file: str = 'קובץ משכורות (CSV)'
+    salary_file: str = 'קובץ משכורות (CSV/Excel)'
     daycare_file: str = 'קובץ מעונות (Excel)'
     salary_columns: tuple[str, ...] = (
         SalaryColumns.FIRST_NAME,
@@ -76,5 +76,5 @@ def get_input_format_help() -> str:
         "אם הקובץ מכיל רק עמודה אחת, הוא ייקרא רק את שמות המעונות.\n\n"
         f"הקובץ השני הוא {InputFileFormats.salary_file}.\n"
         f"העמודות הנדרשות בו הן: {salary_labels}.\n"
-        "הקובץ יכול להיות בקידוד UTF-8 או Windows-1255."
+        "הקובץ יכול להיות CSV או Excel, וב-CSV גם בקידוד UTF-8 או Windows-1255."
     )

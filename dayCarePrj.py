@@ -20,7 +20,7 @@ class MainWindow(QMainWindow):
         self.salaries_path = ""
         
         self.lbl_daycares = QLabel("לא נבחר קובץ מעונות (Excel)")
-        self.lbl_salaries = QLabel("לא נבחר קובץ משכורות (CSV)")
+        self.lbl_salaries = QLabel("לא נבחר קובץ משכורות (CSV/Excel)")
         self.lbl_daycares.setStyleSheet(
             "color: #1f2937; font-size: 12px; font-weight: 600; padding: 6px;"
             "background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px;"
@@ -34,7 +34,7 @@ class MainWindow(QMainWindow):
         self.lbl_daycares.setMinimumHeight(40)
         self.lbl_salaries.setMinimumHeight(40)
         self.lbl_daycares.setToolTip("בחר קובץ Excel שמכיל את רשימת המעונות (עמודה ראשונה)")
-        self.lbl_salaries.setToolTip("בחר קובץ CSV עם שדות השכר לפי ההגדרות")
+        self.lbl_salaries.setToolTip("בחר קובץ CSV או Excel עם שדות השכר לפי ההגדרות")
         
         btn_daycares = QPushButton("בחר קובץ מעונות...")
         btn_daycares.clicked.connect(self.select_daycares)
@@ -130,7 +130,12 @@ class MainWindow(QMainWindow):
             self.update_run_button_state()
 
     def select_salaries(self):
-        file, _ = QFileDialog.getOpenFileName(self, "בחר קובץ משכורות", "", "CSV Files (*.csv)")
+        file, _ = QFileDialog.getOpenFileName(
+            self,
+            "בחר קובץ משכורות",
+            "",
+            "CSV/Excel Files (*.csv *.xlsx *.xls *.xlsm);;All Files (*)"
+        )
         if file:
             self.salaries_path = file
             chosen_name = Path(file).name

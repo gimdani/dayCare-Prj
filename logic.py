@@ -38,20 +38,27 @@ class DaycareAllocator:
         return hours
 
     def _read_salaries(self, filepath: str) -> pd.DataFrame:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            try:
-                df = pd.read_csv(filepath, encoding='utf-8', index_col=False)
-            except UnicodeDecodeError:
-                df = pd.read_csv(filepath, encoding='windows-1255', index_col=False)
-        
+        path_lower = str(filepath).lower()
+
+        if path_lower.endswith((".xlsx", ".xls", ".xlsm")):
+            df = pd.read_excel(filepath)
+        else:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                try:
+                    df = pd.read_csv(filepath, encoding='utf-8', index_col=False)
+                except UnicodeDecodeError:
+                    df = pd.read_csv(filepath, encoding='windows-1255', index_col=False)
+                except Exception:
+                    df = pd.read_excel(filepath)
+
         df.columns = df.columns.str.strip()
-        
+
         if SalaryColumns.FIRST_NAME not in df.columns or SalaryColumns.LAST_NAME not in df.columns:
             raise ValueError(
                 f"עמודות '{SalaryColumns.FIRST_NAME}' או '{SalaryColumns.LAST_NAME}' חסרות בקובץ השכר."
             )
-            
+
         df[SalaryColumns.DISPLAY_NAME] = (
             df[SalaryColumns.FIRST_NAME].astype(str).str.strip() + " " +
             df[SalaryColumns.LAST_NAME].astype(str).str.strip()
